@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { Home, Search, Library, Plus, Heart, Sparkles } from 'lucide-react'
+import { Home, Search, Library, Plus, Heart } from 'lucide-react'
 import { usePlayer } from '../context/PlayerContext'
+import { MontageLogo } from './MontageLogo'
 
 export const Sidebar: React.FC = () => {
   const {
@@ -31,23 +32,13 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="w-72 bg-[#121212] flex flex-col h-full select-none border-r border-[#242424] shrink-0 text-[#b3b3b3]">
-      {/* ── Brand Logo Header ── */}
+      {/* ── Brand Logo Header (Fresh Bespoke Emblem) ── */}
       <div className="p-6 pb-4 flex items-center justify-between">
         <div
           onClick={() => navigate({ type: 'home' })}
-          className="flex items-center gap-2.5 cursor-pointer group"
+          className="cursor-pointer group"
         >
-          <div className="w-8 h-8 rounded-full bg-[#1db954] flex items-center justify-center text-black font-black shadow-sm group-hover:scale-105 transition-transform">
-            <Sparkles className="w-4 h-4 fill-black" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-white font-bold tracking-tight text-lg leading-none">
-              MONTAGE
-            </span>
-            <span className="text-[10px] font-semibold text-[#1db954] tracking-widest uppercase mt-0.5">
-              MUSIC
-            </span>
-          </div>
+          <MontageLogo size={36} />
         </div>
       </div>
 

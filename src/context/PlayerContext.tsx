@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import type { Track, Playlist, ViewType, RepeatMode } from '../types'
-import { TRACKS, PLAYLISTS } from '../data/mockData'
+import { TRACKS, PLAYLISTS, ALBUMS } from '../data/mockData'
 import { audioEngine } from '../services/audioEngine'
 
 interface PlayerContextType {
@@ -17,6 +17,8 @@ interface PlayerContextType {
   likedTrackIds: Set<string>
   customPlaylists: Playlist[]
   currentView: ViewType
+  currentThemeColor: string
+  toastMessage: string | null
   canGoBack: boolean
   canGoForward: boolean
   isNowPlayingExpanded: boolean
@@ -34,6 +36,7 @@ interface PlayerContextType {
   createPlaylist: (title: string, description?: string) => string
   addTrackToPlaylist: (playlistId: string, trackId: string) => void
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => void
+  showToast: (msg: string) => void
   navigate: (view: ViewType) => void
   goBack: () => void
   goForward: () => void
@@ -57,6 +60,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off')
   const [queue, setQueue] = useState<Track[]>(TRACKS)
   const [queueIndex, setQueueIndex] = useState<number>(0)
+
+  // Toast System
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg)
+  }, [])
+
+  useEffect(() => {
+    if (!toastMessage) return
+    const timer = setTimeout(() => {
+      setToastMessage(null)
+    }, 2800)
+    return () => clearTimeout(timer)
+  }, [toastMessage])
 
   // Navigation History
   const [history, setHistory] = useState<ViewType[]>([{ type: 'home' }])
@@ -88,10 +105,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return PLAYLISTS
   })
 
-  // Current View
+  // Current View & Theme Color
   const currentView = history[historyIndex] || { type: 'home' }
   const canGoBack = historyIndex > 0
   const canGoForward = historyIndex < history.length - 1
+
+  const currentThemeColor = useMemo(() => {
+    if (!currentTrack) return '#1db954'
+    const album = ALBUMS.find((a) => a.id === currentTrack.albumId)
+    return album?.themeColor || '#1db954'
+  }, [currentTrack])
 
   const navigate = useCallback((view: ViewType) => {
     setHistory((prev) => {
@@ -210,38 +233,53 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const nextMute = !isMuted
     setIsMuted(nextMute)
     audioEngine.setMuted(nextMute)
-  }, [isMuted])
+    showToast(nextMute ? 'Muted' : 'Unmuted')
+  }, [isMuted, showToast])
 
   const toggleShuffle = useCallback(() => {
-    setIsShuffle((prev) => !prev)
-  }, [])
+    setIsShuffle((prev) => {
+      const next = !prev
+      showToast(next ? 'Shuffle is on' : 'Shuffle is off')
+      return next
+    })
+  }, [showToast])
 
   const cycleRepeat = useCallback(() => {
     setRepeatMode((prev) => {
-      if (prev === 'off') return 'all'
-      if (prev === 'all') return 'one'
+      if (prev === 'off') {
+        showToast('Repeat all')
+        return 'all'
+      }
+      if (prev === 'all') {
+        showToast('Repeat one')
+        return 'one'
+      }
+      showToast('Repeat off')
       return 'off'
     })
-  }, [])
+  }, [showToast])
 
   const toggleLike = useCallback((trackId: string) => {
     setLikedTrackIds((prev) => {
       const next = new Set(prev)
       if (next.has(trackId)) {
         next.delete(trackId)
+        showToast('Removed from your Liked Songs')
       } else {
         next.add(trackId)
+        showToast('Added to your Liked Songs')
       }
       localStorage.setItem('montage_liked_tracks', JSON.stringify(Array.from(next)))
       return next
     })
-  }, [])
+  }, [showToast])
 
   const createPlaylist = useCallback((title: string, description?: string) => {
     const newId = `playlist-custom-${Date.now()}`
+    const plTitle = title.trim() || 'My Playlist #' + (customPlaylists.length + 1)
     const newPlaylist: Playlist = {
       id: newId,
-      title: title.trim() || 'My Playlist #' + (customPlaylists.length + 1),
+      title: plTitle,
       description: description || 'Created by you on Montage Music.',
       coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600&auto=format&fit=crop',
       themeColor: '#1db954',
@@ -257,21 +295,27 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return next
     })
 
+    showToast(`Created playlist "${plTitle}"`)
     return newId
-  }, [customPlaylists.length])
+  }, [customPlaylists.length, showToast])
 
   const addTrackToPlaylist = useCallback((playlistId: string, trackId: string) => {
+    let plName = 'Playlist'
     setCustomPlaylists((prev) => {
       const next = prev.map((p) => {
-        if (p.id === playlistId && !p.trackIds.includes(trackId)) {
-          return { ...p, trackIds: [...p.trackIds, trackId] }
+        if (p.id === playlistId) {
+          plName = p.title
+          if (!p.trackIds.includes(trackId)) {
+            return { ...p, trackIds: [...p.trackIds, trackId] }
+          }
         }
         return p
       })
       localStorage.setItem('montage_custom_playlists', JSON.stringify(next))
       return next
     })
-  }, [])
+    showToast(`Added to "${plName}"`)
+  }, [showToast])
 
   const removeTrackFromPlaylist = useCallback((playlistId: string, trackId: string) => {
     setCustomPlaylists((prev) => {
@@ -284,7 +328,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       localStorage.setItem('montage_custom_playlists', JSON.stringify(next))
       return next
     })
-  }, [])
+    showToast('Removed from playlist')
+  }, [showToast])
 
   // Audio Engine Event Hookup
   useEffect(() => {
@@ -305,7 +350,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Keyboard Shortcuts (Space to play/pause, arrows to seek)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in an input
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
         return
       }
@@ -343,6 +387,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       likedTrackIds,
       customPlaylists,
       currentView,
+      currentThemeColor,
+      toastMessage,
       canGoBack,
       canGoForward,
       isNowPlayingExpanded,
@@ -360,6 +406,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       createPlaylist,
       addTrackToPlaylist,
       removeTrackFromPlaylist,
+      showToast,
       navigate,
       goBack,
       goForward,
@@ -380,6 +427,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       likedTrackIds,
       customPlaylists,
       currentView,
+      currentThemeColor,
+      toastMessage,
       canGoBack,
       canGoForward,
       isNowPlayingExpanded,
@@ -397,6 +446,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       createPlaylist,
       addTrackToPlaylist,
       removeTrackFromPlaylist,
+      showToast,
       navigate,
       goBack,
       goForward

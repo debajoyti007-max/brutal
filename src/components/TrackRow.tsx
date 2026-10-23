@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Play, Pause, Heart, MoreHorizontal, Plus, Check } from 'lucide-react'
+import { Play, Pause, Heart, MoreHorizontal, Plus, Check, Link as LinkIcon, User, Disc } from 'lucide-react'
 import type { Track } from '../types'
 import { usePlayer } from '../context/PlayerContext'
 import { formatTime } from '../utils/format'
@@ -30,6 +30,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
     toggleLike,
     customPlaylists,
     addTrackToPlaylist,
+    showToast,
     navigate
   } = usePlayer()
 
@@ -45,6 +46,13 @@ export const TrackRow: React.FC<TrackRowProps> = ({
     } else {
       playTrack(track, contextQueue)
     }
+  }
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard?.writeText(window.location.origin + window.location.pathname)
+    showToast('Link copied to clipboard')
+    setIsMenuOpen(false)
   }
 
   useEffect(() => {
@@ -64,13 +72,14 @@ export const TrackRow: React.FC<TrackRowProps> = ({
         isCurrent ? 'bg-white/5' : ''
       }`}
     >
-      {/* 1. Track Index / Play Button / Playing Equalizer */}
+      {/* 1. Track Index / Play Button / Spotify 4-Bar Equalizer */}
       <div className="flex items-center justify-center text-xs text-[#b3b3b3] font-mono">
         {isCurrent && isPlaying ? (
-          <div className="flex items-end gap-0.5 h-3.5 group-hover:hidden">
-            <span className="w-0.5 h-full bg-[#1db954] animate-pulse" />
-            <span className="w-0.5 h-2/3 bg-[#1db954] animate-pulse delay-75" />
-            <span className="w-0.5 h-4/5 bg-[#1db954] animate-pulse delay-150" />
+          <div className="flex items-end gap-[2px] h-4 group-hover:hidden">
+            <span className="w-1 bg-[#1db954] rounded-sm animate-equalize-1" />
+            <span className="w-1 bg-[#1db954] rounded-sm animate-equalize-2" />
+            <span className="w-1 bg-[#1db954] rounded-sm animate-equalize-3" />
+            <span className="w-1 bg-[#1db954] rounded-sm animate-equalize-4" />
           </div>
         ) : (
           <span className={`tabular-nums ${isCurrent ? 'text-[#1db954]' : ''} group-hover:hidden`}>
@@ -90,7 +99,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           {isCurrent && isPlaying ? (
             <Pause className="w-4 h-4 fill-white" />
           ) : (
-            <Play className="w-4 h-4 fill-white" />
+            <Play className="w-4 h-4 fill-white translate-x-0.5" />
           )}
         </button>
       </div>
@@ -179,7 +188,61 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 top-6 w-48 bg-[#282828] border border-[#383838] rounded-md shadow-2xl py-1 text-xs text-white z-50">
+            <div className="absolute right-0 top-6 w-52 bg-[#282828] border border-[#383838] rounded-md shadow-2xl py-1 text-xs text-white z-50 animate-in fade-in zoom-in-95 duration-100">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleLike(track.id)
+                  setIsMenuOpen(false)
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-[#383838] transition-colors text-left"
+              >
+                <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-[#1db954] text-[#1db954]' : ''}`} />
+                <span>{isLiked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-[#383838] transition-colors text-left"
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span>Copy Song Link</span>
+              </button>
+
+              {track.artistId && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate({ type: 'artist', artistId: track.artistId })
+                    setIsMenuOpen(false)
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-[#383838] transition-colors text-left"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Go to Artist</span>
+                </button>
+              )}
+
+              {track.albumId && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate({ type: 'album', albumId: track.albumId })
+                    setIsMenuOpen(false)
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-[#383838] transition-colors text-left"
+                >
+                  <Disc className="w-3.5 h-3.5" />
+                  <span>Go to Album</span>
+                </button>
+              )}
+
+              <div className="h-px bg-[#383838] my-1" />
+
               <span className="px-3 py-1.5 text-[10px] uppercase font-semibold text-[#888888] block">
                 Add to playlist
               </span>

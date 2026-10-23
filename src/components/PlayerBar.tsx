@@ -13,7 +13,8 @@ import {
   Heart,
   ListMusic,
   Maximize2,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Mic2
 } from 'lucide-react'
 import { usePlayer } from '../context/PlayerContext'
 import { formatTime } from '../utils/format'
@@ -31,6 +32,7 @@ export const PlayerBar: React.FC = () => {
     likedTrackIds,
     isNowPlayingExpanded,
     isQueueOpen,
+    currentView,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -67,6 +69,7 @@ export const PlayerBar: React.FC = () => {
   }
 
   const isLiked = currentTrack ? likedTrackIds.has(currentTrack.id) : false
+  const isLyricsActive = currentView.type === 'lyrics'
 
   return (
     <footer className="h-[90px] bg-[#121212] border-t border-[#242424] px-4 flex items-center justify-between select-none fixed bottom-0 left-0 right-0 z-40">
@@ -238,8 +241,26 @@ export const PlayerBar: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Right: Secondary Controls (Queue, Fullscreen, Volume) ── */}
+      {/* ── Right: Secondary Controls (Lyrics, Queue, Fullscreen, Volume) ── */}
       <div className="flex items-center justify-end gap-3 w-1/4 min-w-[180px]">
+        {/* Karaoke Fullscreen Lyrics Toggle */}
+        <button
+          type="button"
+          onClick={() => {
+            if (isLyricsActive) {
+              navigate({ type: 'home' })
+            } else {
+              navigate({ type: 'lyrics' })
+            }
+          }}
+          title="Karaoke Lyrics"
+          className={`p-1.5 transition-colors cursor-pointer ${
+            isLyricsActive ? 'text-[#1db954]' : 'text-[#b3b3b3] hover:text-white'
+          }`}
+        >
+          <Mic2 className="w-4 h-4" />
+        </button>
+
         {/* Now Playing Expanded Toggle */}
         <button
           type="button"

@@ -64,5 +64,6 @@ export type ViewType =
   | { type: 'album'; albumId: string }
   | { type: 'artist'; artistId: string }
   | { type: 'liked-songs' }
+  | { type: 'lyrics' }
 
 export type RepeatMode = 'off' | 'all' | 'one'
